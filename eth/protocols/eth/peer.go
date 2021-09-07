@@ -22,6 +22,7 @@ import (
 	"sync"
 
 	mapset "github.com/deckarep/golang-set"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/p2p"
@@ -68,9 +69,10 @@ func max(a, b int) int {
 type Peer struct {
 	id string // Unique ID for the peer, cached
 
-	*p2p.Peer                   // The embedded P2P package peer
-	rw        p2p.MsgReadWriter // Input/output streams for snap
-	version   uint              // Protocol version negotiated
+	*p2p.Peer                    // The embedded P2P package peer
+	rw         p2p.MsgReadWriter // Input/output streams for snap
+	version    uint              // Protocol version negotiated
+	subVersion SubProtocolVersion
 
 	head common.Hash // Latest advertised head block hash
 	td   *big.Int    // Latest advertised head block total difficulty
@@ -118,7 +120,12 @@ func NewPeer(version uint, p *p2p.Peer, rw p2p.MsgReadWriter, txpool TxPool) *Pe
 // you created the peer yourself via NewPeer. Otherwise let whoever created it
 // clean it up!
 func (p *Peer) Close() {
-	close(p.term)
+	p.Log().Info("closing broadcast routines")
+	select {
+	case <-p.term:
+	default:
+		close(p.term)
+	}
 }
 
 // ID retrieves the peer's unique identifier.

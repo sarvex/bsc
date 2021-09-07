@@ -232,6 +232,7 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 		Checkpoint:      checkpoint,
 		Whitelist:       config.Whitelist,
 		DirectBroadcast: config.DirectBroadcast,
+		SubVersion:      config.SubVersion,
 	}); err != nil {
 		return nil, err
 	}

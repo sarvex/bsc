@@ -86,11 +86,13 @@ type handlerConfig struct {
 	Checkpoint      *params.TrustedCheckpoint // Hard coded checkpoint for sync challenges
 	Whitelist       map[uint64]common.Hash    // Hard coded whitelist for sync challenged
 	DirectBroadcast bool
+	SubVersion      uint64
 }
 
 type handler struct {
 	networkID  uint64
 	forkFilter forkid.Filter // Fork ID filter, constant across the lifetime of the node
+	subVersion uint64
 
 	fastSync        uint32 // Flag whether fast sync is enabled (gets disabled if we already have blocks)
 	snapSync        uint32 // Flag whether fast sync should operate on top of the snap protocol
@@ -136,6 +138,7 @@ func newHandler(config *handlerConfig) (*handler, error) {
 	h := &handler{
 		networkID:       config.Network,
 		forkFilter:      forkid.NewFilter(config.Chain),
+		subVersion:      config.SubVersion,
 		eventMux:        config.EventMux,
 		database:        config.Database,
 		txpool:          config.TxPool,
@@ -262,7 +265,7 @@ func (h *handler) runEthPeer(peer *eth.Peer, handler eth.Handler) error {
 		td      = h.chain.GetTd(hash, number)
 	)
 	forkID := forkid.NewID(h.chain.Config(), h.chain.Genesis().Hash(), h.chain.CurrentHeader().Number.Uint64())
-	if err := peer.Handshake(h.networkID, td, hash, genesis.Hash(), forkID, h.forkFilter); err != nil {
+	if err := peer.Handshake(h.networkID, td, hash, genesis.Hash(), forkID, h.forkFilter, h.subVersion); err != nil {
 		peer.Log().Debug("Ethereum handshake failed", "err", err)
 		return err
 	}
