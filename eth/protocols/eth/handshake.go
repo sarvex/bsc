@@ -95,7 +95,7 @@ func (p *Peer) Handshake(network uint64, td *big.Int, head common.Hash, genesis 
 
 		if !p.subVersion.NeedTxsBroadcastedFromPeers() {
 			p.Log().Debug("peer does not need broadcast txs, closing broadcast routines")
-			p.Close()
+			p.CloseTxBroadcast()
 		}
 	}
 

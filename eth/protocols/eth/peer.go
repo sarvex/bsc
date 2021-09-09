@@ -86,8 +86,9 @@ type Peer struct {
 	txBroadcast chan []common.Hash // Channel used to queue transaction propagation requests
 	txAnnounce  chan []common.Hash // Channel used to queue transaction announcement requests
 
-	term chan struct{} // Termination channel to stop the broadcasters
-	lock sync.RWMutex  // Mutex protecting the internal fields
+	term   chan struct{} // Termination channel to stop the broadcasters
+	txTerm chan struct{} // Termination channel to stop the broadcasters
+	lock   sync.RWMutex  // Mutex protecting the internal fields
 }
 
 // NewPeer create a wrapper for a network connection and negotiated  protocol
@@ -106,6 +107,7 @@ func NewPeer(version uint, p *p2p.Peer, rw p2p.MsgReadWriter, txpool TxPool) *Pe
 		txAnnounce:      make(chan []common.Hash),
 		txpool:          txpool,
 		term:            make(chan struct{}),
+		txTerm:          make(chan struct{}),
 	}
 	// Start up all the broadcasters
 	go peer.broadcastBlocks()
@@ -120,12 +122,12 @@ func NewPeer(version uint, p *p2p.Peer, rw p2p.MsgReadWriter, txpool TxPool) *Pe
 // you created the peer yourself via NewPeer. Otherwise let whoever created it
 // clean it up!
 func (p *Peer) Close() {
-	p.Log().Info("closing broadcast routines")
-	select {
-	case <-p.term:
-	default:
-		close(p.term)
-	}
+	close(p.term)
+}
+
+// CloseTxBroadcast signals the tx broadcast goroutine to terminate.
+func (p *Peer) CloseTxBroadcast() {
+	close(p.txTerm)
 }
 
 // ID retrieves the peer's unique identifier.
@@ -219,6 +221,10 @@ func (p *Peer) AsyncSendTransactions(hashes []common.Hash) {
 		for _, hash := range hashes {
 			p.knownTxs.Add(hash)
 		}
+
+	case <-p.txTerm:
+		p.Log().Debug("Dropping transaction propagation", "count", len(hashes))
+
 	case <-p.term:
 		p.Log().Debug("Dropping transaction propagation", "count", len(hashes))
 	}
@@ -254,6 +260,10 @@ func (p *Peer) AsyncSendPooledTransactionHashes(hashes []common.Hash) {
 		for _, hash := range hashes {
 			p.knownTxs.Add(hash)
 		}
+
+	case <-p.txTerm:
+		p.Log().Debug("Dropping transaction announcement", "count", len(hashes))
+
 	case <-p.term:
 		p.Log().Debug("Dropping transaction announcement", "count", len(hashes))
 	}
