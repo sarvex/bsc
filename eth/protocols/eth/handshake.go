@@ -72,7 +72,7 @@ func (p *Peer) Handshake(network uint64, td *big.Int, head common.Hash, genesis 
 		var upgradeStatus UpgradeStatusPacket // safe to read after two values have been received from errc
 
 		gopool.Submit(func() {
-			errc <- p2p.Send(p.rw, StatusMsg, &UpgradeStatusPacket{
+			errc <- p2p.Send(p.rw, UpgradeStatusMsg, &UpgradeStatusPacket{
 				SubProtocolVersion: SubProtocolVersion(subVersion),
 			})
 		})
@@ -143,14 +143,14 @@ func (p *Peer) readUpgradeStatus(status *UpgradeStatusPacket) error {
 	if err != nil {
 		return err
 	}
-	if msg.Code != StatusMsg {
-		return fmt.Errorf("%w: first msg has code %x (!= %x)", errNoStatusMsg, msg.Code, StatusMsg)
+	if msg.Code != UpgradeStatusMsg {
+		return fmt.Errorf("%w: first msg has code %x (!= %x)", errNoStatusMsg, msg.Code, UpgradeStatusMsg)
 	}
 	if msg.Size > maxMessageSize {
 		return fmt.Errorf("%w: %v > %v", errMsgTooLarge, msg.Size, maxMessageSize)
 	}
-	// Decode the upgrade status packet, ignore the decode error for the future upgrade
-	// leave the checks in the handshake function
-	msg.Decode(&status)
+	if err := msg.Decode(&status); err != nil {
+		return fmt.Errorf("%w: message %v: %v", errDecode, msg, err)
+	}
 	return nil
 }
