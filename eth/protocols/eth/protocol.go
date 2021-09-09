@@ -103,7 +103,7 @@ type StatusPacket struct {
 
 type UpgradeStatusPacket struct {
 	SubProtocolVersion SubProtocolVersion
-	Extension          rlp.RawValue
+	Extension          *rlp.RawValue `rlp:"nil"`
 }
 
 type SubProtocolVersion uint64

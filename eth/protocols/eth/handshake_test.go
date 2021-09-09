@@ -89,7 +89,3 @@ func testHandshake(t *testing.T, protocol uint) {
 		}
 	}
 }
-
-func TestVersion(t *testing.T) {
-	println(0 & 0x1)
-}
